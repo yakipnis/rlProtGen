@@ -1,4 +1,4 @@
-# BBG
+# rlProtGen (rL protein generator)
 Generation of BackBones conditioned on theozyme geometry
 
 Owners: Yakov Kipnis and Ariel Ben-Sasson
