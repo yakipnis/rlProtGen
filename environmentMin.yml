@@ -1,0 +1,14 @@
+name: rlProtGen
+channels:
+  - defaults
+dependencies:
+  - python=3.7
+  - jupyter
+  - numpy
+  - scipy
+  - tqdm
+  - pandas
+  - pypdb
+  - pytorch
+  - tensorflow
+prefix: /home/arielb10/.conda/envs/rlProtGen
