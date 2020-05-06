@@ -1,0 +1,93 @@
+Downloaded Rosetta master from github (11-03-2019).
+github username yakipnis
+pass standard for websites (\./)website
+Had to regenerate/add new SSH key from digs (no idea what happened to the old one) following instructions on
+https://help.github.com/articles/error-permission-denied-publickey/
+
+>>curl -OL https://raw.github.com/RosettaCommons/rosetta_clone_tools/master/get_rosetta.sh && bash get_rosetta.sh
+
+using SSH options. Passphrase for the new key (when it was generated) was not set.
+After downloading source (took 5 min max) switching the branch to 
+origin/frankdt/pose_sewing
+
+for TopologyBroker_Rosetta go to 
+origin/justinrporter/topology-broker-variant-matching-fix.
+
+>>cd Rosetta/main/
+>>ls -ltra #to see if .git is present
+and
+>>git checkout origin/frankdt/pose_sewing #to switch branches
+
+For TopologyBroker 
+>>git checkout origin/justinrporter/topology-broker-variant-matching-fix #there where some activity after this command
+
+and finally
+>>git pull #didin't work for TopologyBroker branch ( git was throwing an error like branch doesn't exsists or something. Run diff command on file where modifications where made compared to other Rosetta distro and compiled TopologyBroker_Rosetta anyway. Seems to have worked)
+
+compiled locally using
+>> ./scons.py -j4 mode=release cxx=gcc bin (Took about 3-4 hours to compile, cxx=clang didn't work. Some insignificant compilation errors stopped compilation.)
+
+Compilation on digs instructions
+http://wiki.baker/index.php/Building_Rosetta_yourself
+
+To build with Scons, navigate to your Rosetta source directory (Rosetta/main/source) and type:
+
+./scons.py -j <number of compilation processes to run in parallel> mode=<debug|release_debug|release> bin cxx=<compiler> extras=<extras>
+
+>>>>>ON NEW DIGS<<<<<<< (not sure if legitimate from sysadmin perspective) 
+request interactive node with 20 cores
+bash>>> qlogin -c20
+
+and compile
+bash>>> python scons.py -j20 mode=release bin #(took ~2 hours to compile)
+or with extras option to enable execution of Multistage Rosetta Scripts
+bash>> python scons.py -j20 mode=release bin extras=mpi,serialization
+
+Look below for additions made to the database to enable Lys_Methodol patches
+>>>>>>((((()))))<<<<<<<<<<
+
+Replace bin in the above with bin/<executable name> to compile just one particular Rosetta executable, or leave it as bin to build everything. For example, to build just RosettaScripts in release mode as a static executable with the default (gcc) compiler, with ten parallel compilation processes going simultaneously, you'd type:
+
+./scons.py -j 10 mode=release bin/rosetta_scripts.static.linuxgccrelease extras=static
+./scons.py -j 10 mode=release bin/CstfileToTheozymePDB.static.linuxgccrelease extras=static
+
+############### What special considerations are there on the DIGs? #########################################
+1. Before compiling on the DIGs, it is necessary to load the Red Hat Linux Development Tools environment. This can be done easily by typing:
+
+scl enable devtoolset-2 'bash'
+The above step must be done every time before compiling. If you are wrapping the scons.py script in another script, you can do this: (in bash for example)
+
+scl enable devtoolset-2 'python scons.py bin/rosetta_scripts.linuxgccrelease -j20 mode=release'
+2. A single time, you will also need to edit your user.settings file (once for each installation of Rosetta). Navigate to your Rosetta source directory (Rosetta/main/source) and use your favourite text editor to edit tools/build/user.settings.
+If this file does not exist, type cp tools/build/user.settings.template tools/build/user.settings, then proceed to edit it.
+-- Uncomment (i.e. remove the pound sign from) the import os line.
+-- Uncomment the program_path"  : os.environ["PATH"].split(":"), line.
+-- Uncomment the "ENV" : os.environ, line.
+If the line "ENV" : os.environ, does not exist, add it to the "overrides" section:
+
+"overrides" : {
+    "ENV" : os.environ,
+},
+3. Compile using scons as described above.
+##########################################################################################################
+
+Use instructions below (copied from "making_Lys_Methodol_patch" NOTES.txt) to add new Residue Variant TYPE in case needed Lys_Methodol conjugation patches
+
+############( 2018-06-12 )#######################
+While mutation and minimization work with new Lys_Methodol patches, Packer "refuses" to use them, throws an error
+"! found_aa_difference" from main/source/src/core/pack/task/ResidueLevelTask_.cc code related somehow to interchangeability_group parameter testing
+
+or not applying the patch, or replacing Lys-Methodol conjugate with something else depending on value of TYPE tag in the patch.
+
+Found short description of the patch system format in 
+main/source/src/core/chemical/Patch.cc
+and comments throughout the code
+
+Looks like need to add specific VariantType corresponding to particular Type of patch (all other Types for Lys have differences that make them incompatible with Lys-Methodol conjugate patch; example SIDECHAIN_CONJUGATION converts Lys amino group into HZ-NZ(CE)-V1 group)
+
+In
+/home/kipnis/git_rosetta_20180805/Rosetta/main/source/src/core/chemical/VariantType.hh
+comments section there are instructions how to add new TYPE to Rosetta
+1. Add METHODOL at the end of the /home/kipnis/git_rosetta_20180805/Rosetta/main/source/src/core/chemical/residue_properties/variant_types.list
+2. Run /home/kipnis/git_rosetta_20180805/Rosetta/main/source/src/core/chemical/residue_properties/update_ResidueType_enum_files.py
+3. Recompile Rosetta excecutables
